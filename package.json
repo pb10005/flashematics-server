@@ -1,0 +1,17 @@
+{
+  "name": "flashematics-server",
+  "version": "1.0.0",
+  "main": "main.js",
+  "license": "MIT",
+  "scripts": {
+    "start": "node main.js",
+    "initdb": "sqlite3 ./sqlite/data.db < ./init.sql",
+    "dev": "node-dev main.js"
+  },
+  "dependencies": {
+    "cors": "^2.8.5",
+    "express": "^4.17.1",
+    "node-dev": "^7.0.0",
+    "sqlite3": "^5.0.2"
+  }
+}
