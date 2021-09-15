@@ -27,8 +27,7 @@ app.get("/", (req, res) => {
 
 app.post("/decks", (req, res) => {
     const reqBody = req.body;
-    const stmt = db.prepare("insert into decks(name,base64) values(?,?)"); 
-    stmt.run(reqBody.name, reqBody.base64, (err, result) => { 
+    db.get("select * from decks where name = ?", reqBody.name, (err, row) => {
         if (err) {
             res.status(400).json({
                 "status": "error",
@@ -36,12 +35,43 @@ app.post("/decks", (req, res) => {
             });
             return;
         } else {
-            res.status(200).json({
-                "status": "OK",
-                "lastID": stmt.lastID
-            });
+            if(!row) {
+                // insert if the row not exists
+                const stmt = db.prepare("insert into decks(name,base64) values(?,?)"); 
+                stmt.run(reqBody.name, reqBody.base64, (err, result) => { 
+                    if (err) {
+                        res.status(400).json({
+                            "status": "error",
+                            "message": err.message
+                        });
+                        return;
+                    } else {
+                        res.status(200).json({
+                            "status": "OK",
+                            "lastID": stmt.lastID
+                        });
+                    }
+                });
+            } else {
+                // update if the row exists
+                const stmt = db.prepare("update decks set base64 = ? where name = ?");
+                stmt.run(reqBody.base64, reqBody.name, (err, result) => {
+                    if (err) {
+                        res.status(400).json({
+                            "status": "error",
+                            "message": err.message
+                        });
+                        return;
+                    } else {
+                        res.status(200).json({
+                            "status": "OK",
+                            "updatedID": stmt.changes
+                        });
+                    }
+                })
+            }
         }
-    });
+    })
 });
 
 app.get("/decks", (req, res) => {
@@ -98,28 +128,9 @@ app.get("/decks/get/:name", (req, res) => {
     })
 })
 
-app.patch("/decks", (req, res) => {
-    const reqBody = req.body;
-    const stmt = db.prepare("update decks set name = ?, base64 = ? where id = ?");
-    stmt.run(reqBody.name, reqBody.base64, reqBody.id, (err, result) => {
-        if (err) {
-            res.status(400).json({
-                "status": "error",
-                "message": err.message
-            });
-            return;
-        } else {
-            res.status(200).json({
-                "status": "OK",
-                "updatedID": stmt.changes
-            });
-        }
-    })
-})
-
-app.delete("/decks/:id", (req, res) => {
-    const id = req.params.id;
-    const stmt = db.prepare("delete from decks where id = ?");
+app.delete("/decks/:name", (req, res) => {
+    const name = req.params.name;
+    const stmt = db.prepare("delete from decks where name = ?");
     stmt.run(id, (err, result) => {
         if (err) {
             res.status(400).json({
