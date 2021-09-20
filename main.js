@@ -37,7 +37,7 @@ app.post("/decks", (req, res) => {
         } else {
             if(!row) {
                 // insert if the row not exists
-                const stmt = db.prepare("insert into decks(name,base64) values(?,?)"); 
+                const stmt = db.prepare("insert into decks(name,base64,created_at, updated_at) values(?,?,CURRENT_TIMESTAMP,CURRENT_TIMESTAMP)"); 
                 stmt.run(reqBody.name, reqBody.base64, (err, result) => { 
                     if (err) {
                         res.status(400).json({
@@ -54,7 +54,16 @@ app.post("/decks", (req, res) => {
                 });
             } else {
                 // update if the row exists
-                const stmt = db.prepare("update decks set base64 = ? where name = ?");
+                // check last update time is the same as that on the database before update
+                if(row.updated_at !== reqBody.updatedAt) {
+                    res.status(400).json({
+                        "status": "err",
+                        "message": "Someone has updated this record while you are modifing it."
+                    })
+                    return;
+                }
+
+                const stmt = db.prepare("update decks set base64 = ?, updated_at = CURRENT_TIMESTAMP where name = ?");
                 stmt.run(reqBody.base64, reqBody.name, (err, result) => {
                     if (err) {
                         res.status(400).json({
@@ -75,7 +84,7 @@ app.post("/decks", (req, res) => {
 });
 
 app.get("/decks", (req, res) => {
-    db.all("select * from decks", [], (err, rows) => {
+    db.all("select id, name, created_at, updated_at from decks", [], (err, rows) => {
         if (err) {
             res.status(400).json({
                 "status": "error",
